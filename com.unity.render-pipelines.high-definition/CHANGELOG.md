@@ -374,6 +374,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Disable Async for SSR, SSAO and Contact shadow when aggregated ray tracing frame setting is on.
 - Improved performance when entering play mode without domain reload by a factor of ~25
 - Renamened the camera profiling sample to include the camera name
+- Refactoring pre-existing materials to share more shader code between rasterization and ray tracing.
 
 ## [7.1.1] - 2019-09-05
 
