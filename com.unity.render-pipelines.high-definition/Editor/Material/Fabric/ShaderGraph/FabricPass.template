@@ -32,6 +32,7 @@ Pass
     #pragma shader_feature _SURFACE_TYPE_TRANSPARENT
     #pragma shader_feature_local _DOUBLESIDED_ON
     #pragma shader_feature_local _ _BLENDMODE_ALPHA _BLENDMODE_ADD _BLENDMODE_PRE_MULTIPLY
+    #pragma shader_feature_local _ENABLE_FOG_ON_TRANSPARENT
 
     //-------------------------------------------------------------------------------------
     // Variant Definitions (active field translations to HDRP defines)
@@ -39,7 +40,6 @@ Pass
     $Material.CottonWool:               #define _MATERIAL_FEATURE_COTTON_WOOL 1
     $Material.Transmission:             #define _MATERIAL_FEATURE_TRANSMISSION 1
     $Material.SubsurfaceScattering:     #define _MATERIAL_FEATURE_SUBSURFACE_SCATTERING 1
-    $AlphaFog:                          #define _ENABLE_FOG_ON_TRANSPARENT 1
     $Occlusion:                         #define _OCCLUSION 1
     $SpecularOcclusionFromAO:           #define _SPECULAR_OCCLUSION_FROM_AO 1
     $SpecularOcclusionFromAOBentNormal: #define _SPECULAR_OCCLUSION_FROM_AO_BENT_NORMAL 1
@@ -278,8 +278,7 @@ $include("SharedCode.template.hlsl")
     void GetSurfaceAndBuiltinData(FragInputs fragInputs, float3 V, inout PositionInputs posInput, out SurfaceData surfaceData, out BuiltinData builtinData)
     {
 #ifdef LOD_FADE_CROSSFADE // enable dithering LOD transition if user select CrossFade transition in LOD group
-        uint3 fadeMaskSeed = asuint((int3)(V * _ScreenSize.xyx)); // Quantize V to _ScreenSize values
-        LODDitheringTransition(fadeMaskSeed, unity_LODFade.x);
+        LODDitheringTransition(ComputeFadeMaskSeed(V, posInput.positionSS), unity_LODFade.x);
 #endif
 
 #ifdef _DOUBLESIDED_ON

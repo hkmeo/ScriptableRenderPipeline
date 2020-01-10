@@ -365,7 +365,7 @@ namespace UnityEditor.Rendering.HighDefinition
                     return;
 
                 m_DoubleSidedMode = value;
-                Dirty(ModificationScope.Graph);
+                Dirty(ModificationScope.Topological);
             }
         }
 
@@ -605,6 +605,20 @@ namespace UnityEditor.Rendering.HighDefinition
             }
         }
 
+        [SerializeField]
+        int m_MaterialNeedsUpdateHash = 0;
+
+        int ComputeMaterialNeedsUpdateHash()
+        {
+            int hash = 0;
+
+            hash |= (alphaTest.isOn ? 0 : 1) << 0;
+            hash |= (alphaTestShadow.isOn ? 0 : 1) << 1;
+            hash |= (receiveSSR.isOn ? 0 : 1) << 2;
+
+            return hash;
+        }
+
         public HairMasterNode()
         {
             UpdateNodeAfterDeserialization();
@@ -833,6 +847,21 @@ namespace UnityEditor.Rendering.HighDefinition
             HairGUI.SetupMaterialKeywordsAndPass(previewMaterial);
         }
 
+        public override object saveContext
+        {
+            get
+            {
+                int hash = ComputeMaterialNeedsUpdateHash();
+
+                bool needsUpdate = hash != m_MaterialNeedsUpdateHash;
+
+                if (needsUpdate)
+                    m_MaterialNeedsUpdateHash = hash;
+
+                return new HDSaveContext{ updateMaterials = needsUpdate };
+            }
+        }
+
         public override void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
             // Trunk currently relies on checking material property "_EmissionColor" to allow emissive GI. If it doesn't find that property, or it is black, GI is forced off.
@@ -868,7 +897,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 zWrite.isOn,
                 transparentCullMode,
                 zTest,
-                backThenFrontRendering.isOn
+                backThenFrontRendering.isOn,
+                transparencyFog.isOn
             );
             HDSubShaderUtilities.AddAlphaCutoffShaderProperties(collector, alphaTest.isOn, alphaTestShadow.isOn);
             HDSubShaderUtilities.AddDoubleSidedProperty(collector, doubleSidedMode);
