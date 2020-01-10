@@ -2498,7 +2498,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     if (camera.camera.cameraType != CameraType.SceneView || customPP.visibleInSceneView)
                     {
-                        var destination = m_Pool.Get(Vector2.one, k_ColorFormat);
+                        var destination = m_Pool.Get(Vector2.one, m_ColorFormat);
                         CoreUtils.SetRenderTarget(cmd, destination);
                         {
                             cmd.BeginSample(customPP.name);
