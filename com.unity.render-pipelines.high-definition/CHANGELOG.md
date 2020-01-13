@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added documentation for the rayTracingSupported method in HDRP
 - Added user-selectable format for the post processing passes. 
 - Added support for alpha channel in some post-processing passes (DoF, TAA, Uber).
+- Added warnings in FrameSettings inspector when using DXR and atempting to use Asynchronous Execution.
 
 ### Fixed
 - Sorting, undo, labels, layout in the Lighting Explorer.
@@ -368,6 +369,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Disable Async for SSR, SSAO and Contact shadow when aggregated ray tracing frame setting is on.
 - Improved performance when entering play mode without domain reload by a factor of ~25
 - Renamened the camera profiling sample to include the camera name
+- The restart in Wizard for DXR will always be last fix from now on
 
 ## [7.1.1] - 2019-09-05
 
