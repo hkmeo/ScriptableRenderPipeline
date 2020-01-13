@@ -237,16 +237,16 @@ namespace UnityEngine.Rendering.HighDefinition
                 int coockieResolution = (int)lightLoopSettings.cookieSize;
                 if (TextureCache2D.GetApproxCacheSizeInByte(coockieSize, coockieResolution, 1) > k_MaxCacheSize)
                     coockieSize = TextureCache2D.GetMaxCacheSizeForWeightInByte(k_MaxCacheSize, coockieResolution, 1);
-                cookieTexArray.AllocTextureArray(coockieSize, coockieResolution, coockieResolution, TextureFormat.RGBA32, true);
+                cookieTexArray.AllocTextureArray(coockieSize, coockieResolution, coockieResolution, GraphicsFormat.R8G8B8A8_SRGB, true);
                 cubeCookieTexArray = new TextureCacheCubemap("Cookie");
                 int coockieCubeSize = lightLoopSettings.cubeCookieTexArraySize;
                 int coockieCubeResolution = (int)lightLoopSettings.pointCookieSize;
                 if (TextureCacheCubemap.GetApproxCacheSizeInByte(coockieCubeSize, coockieCubeResolution, 1) > k_MaxCacheSize)
                     coockieCubeSize = TextureCacheCubemap.GetMaxCacheSizeForWeightInByte(k_MaxCacheSize, coockieCubeResolution, 1);
-                cubeCookieTexArray.AllocTextureArray(coockieCubeSize, coockieCubeResolution, TextureFormat.RGBA32, true, m_CubeToPanoMaterial);
+                cubeCookieTexArray.AllocTextureArray(coockieCubeSize, coockieCubeResolution, GraphicsFormat.R8G8B8A8_SRGB, true, m_CubeToPanoMaterial);
 
                 // For regular reflection probes, we need to convolve with all the BSDF functions
-                TextureFormat probeCacheFormat = lightLoopSettings.reflectionCacheCompressed ? TextureFormat.BC6H : TextureFormat.RGBAHalf;
+                GraphicsFormat probeCacheFormat = lightLoopSettings.reflectionCacheCompressed ? GraphicsFormat.RGB_BC6H_SFloat : GraphicsFormat.R16G16B16A16_SFloat;
                 int reflectionCubeSize = lightLoopSettings.reflectionProbeCacheSize;
                 int reflectionCubeResolution = (int)lightLoopSettings.reflectionCubemapSize;
                 if (ReflectionProbeCache.GetApproxCacheSizeInByte(reflectionCubeSize, reflectionCubeResolution, iBLFilterBSDFArray.Length) > k_MaxCacheSize)
@@ -254,7 +254,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 reflectionProbeCache = new ReflectionProbeCache(defaultResources, iBLFilterBSDFArray, reflectionCubeSize, reflectionCubeResolution, probeCacheFormat, true);
 
                 // For planar reflection we only convolve with the GGX filter, otherwise it would be too expensive
-                TextureFormat planarProbeCacheFormat = lightLoopSettings.planarReflectionCacheCompressed ? TextureFormat.BC6H : TextureFormat.RGBAHalf;
+                GraphicsFormat planarProbeCacheFormat = lightLoopSettings.planarReflectionCacheCompressed ? GraphicsFormat.RGB_BC6H_SFloat : GraphicsFormat.R16G16B16A16_SFloat;
                 int reflectionPlanarSize = lightLoopSettings.planarReflectionProbeCacheSize;
                 int reflectionPlanarResolution = (int)lightLoopSettings.planarReflectionTextureSize;
                 if (ReflectionProbeCache.GetApproxCacheSizeInByte(reflectionPlanarSize, reflectionPlanarResolution, 1) > k_MaxCacheSize)
@@ -493,6 +493,7 @@ namespace UnityEngine.Rendering.HighDefinition
         int m_TotalLightCount = 0;
         int m_densityVolumeCount = 0;
         bool m_enableBakeShadowMask = false; // Track if any light require shadow mask. In this case we will need to enable the keyword shadow mask
+        bool m_hasRunLightListPrevFrame = false;
 
         ComputeShader buildScreenAABBShader { get { return defaultResources.shaders.buildScreenAABBCS; } }
         ComputeShader buildPerTileLightListShader { get { return defaultResources.shaders.buildPerTileLightListCS; } }
@@ -2105,10 +2106,6 @@ namespace UnityEngine.Rendering.HighDefinition
                     {
                         var light = cullResults.visibleLights[lightIndex];
 
-                        // For Shuriken particle light, the light from the culling result can be null
-                        if (light.light == null)
-                            continue;
-
                         // We can skip the processing of lights that are so small to not affect at least a pixel on screen.
                         // TODO: The minimum pixel size on screen should really be exposed as parameter, to allow small lights to be culled to user's taste.
                         const int minimumPixelAreaOnScreen = 1;
@@ -2117,7 +2114,7 @@ namespace UnityEngine.Rendering.HighDefinition
                             continue;
                         }
 
-                        if (!aovRequest.IsLightEnabled(light.light.gameObject))
+                        if (light.light != null && !aovRequest.IsLightEnabled(light.light.gameObject))
                             continue;
 
                         var lightComponent = light.light;
@@ -2866,15 +2863,14 @@ namespace UnityEngine.Rendering.HighDefinition
             parameters.runLightList = m_TotalLightCount > 0;
 
             // If we don't need to run the light list, we still run it for the first frame that is not needed in order to keep the lists in a clean state.
-            // TODO: We re-run the light list building with no list since there was a problem with clearing the buffer. Need to investigate again the clear.
-            if (!parameters.runLightList && hdCamera.hasRunLightListBuildingPrevFrame)
+            if (!parameters.runLightList && m_hasRunLightListPrevFrame)
             {
-                hdCamera.hasRunLightListBuildingPrevFrame = false;
+                m_hasRunLightListPrevFrame = false;
                 parameters.runLightList = true;
             }
             else
             {
-                hdCamera.hasRunLightListBuildingPrevFrame = parameters.runLightList;
+                m_hasRunLightListPrevFrame = parameters.runLightList;
             }
 
             // Always build the light list in XR mode to avoid issues with multi-pass
