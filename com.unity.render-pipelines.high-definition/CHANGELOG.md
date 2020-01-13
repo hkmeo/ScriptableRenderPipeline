@@ -304,6 +304,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed a warning in simpledenoiser.compute
 - Fixed tube and rectangle light culling to use their shape instead of their range as a bounding box.
 - Fixed caused by using gather on a UINT texture in motion blur. 
+- Fixed white and dark flashes on scenes with very high or very low exposure when Automatic Exposure is being used.
 
 ### Changed
 - Color buffer pyramid is not allocated anymore if neither refraction nor distortion are enabled
