@@ -354,6 +354,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated the MSAA documentation to specify what features HDRP supports MSAA for and what features it does not.
 - Shader use for Runtime Debug Display are now correctly stripper when doing a release build
 - Now each camera has its own Volume Stack. This allows Volume Parameters to be updated as early as possible and be ready for the whole frame without conflicts between cameras.
+- Updated the default scene and default DXR scene and DefaultVolumeProfile.
 
 ## [7.1.1] - 2019-09-05
 
