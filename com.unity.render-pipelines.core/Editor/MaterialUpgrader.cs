@@ -260,6 +260,17 @@ namespace UnityEditor.Rendering
             AssetDatabase.Refresh();
         }
 
+        private static bool ShouldUpgradeShader(Material material, HashSet<string> shaderNamesToIgnore)
+        {
+            if (material == null)
+                return false;
+
+            if (material.shader == null)
+                return false;
+
+            return !shaderNamesToIgnore.Contains(material.shader.name);
+        }
+
         /// <summary>
         /// Upgrade the project folder.
         /// </summary>
@@ -288,6 +299,48 @@ namespace UnityEditor.Rendering
                         break;
 
                     Material m = UnityEditor.AssetDatabase.LoadMainAssetAtPath(path) as Material;
+                    Upgrade(m, upgraders, flags);
+
+                    //SaveAssetsAndFreeMemory();
+                }
+            }
+
+            UnityEditor.EditorUtility.ClearProgressBar();
+        }
+
+        /// <summary>
+        /// Upgrade the project folder.
+        /// </summary>
+        /// <param name="upgraders">List of upgraders.</param>
+        /// <param name="shaderNamesToIgnore">Set of shader names to ignore.</param>
+        /// <param name="progressBarName">Name of the progress bar.</param>
+        /// <param name="flags">Material Upgrader flags.</param>
+        public static void UpgradeProjectFolder(List<MaterialUpgrader> upgraders, HashSet<string> shaderNamesToIgnore, string progressBarName, UpgradeFlags flags = UpgradeFlags.None)
+        {
+            if (!EditorUtility.DisplayDialog(DialogText.title, "The upgrade will overwrite materials in your project. " + DialogText.projectBackMessage, DialogText.proceed, DialogText.cancel))
+                return;
+
+            int totalMaterialCount = 0;
+            foreach (string s in UnityEditor.AssetDatabase.GetAllAssetPaths())
+            {
+                if (IsMaterialPath(s))
+                    totalMaterialCount++;
+            }
+            
+            int materialIndex = 0;
+            foreach (string path in UnityEditor.AssetDatabase.GetAllAssetPaths())
+            {
+                if (IsMaterialPath(path))
+                {
+                    materialIndex++;
+                    if (UnityEditor.EditorUtility.DisplayCancelableProgressBar(progressBarName, string.Format("({0} of {1}) {2}", materialIndex, totalMaterialCount, path), (float)materialIndex / (float)totalMaterialCount))
+                        break;
+
+                    Material m = UnityEditor.AssetDatabase.LoadMainAssetAtPath(path) as Material;
+
+                    if (!ShouldUpgradeShader(m, shaderNamesToIgnore))
+                        continue;
+                    
                     Upgrade(m, upgraders, flags);
 
                     //SaveAssetsAndFreeMemory();
@@ -371,6 +424,61 @@ namespace UnityEditor.Rendering
                     break;
 
                 var material = selectedMaterials[i];
+                Upgrade(material, upgraders, flags);
+                if (material != null)
+                    lastMaterialName = material.name;
+            }
+
+            UnityEditor.EditorUtility.ClearProgressBar();
+        }
+
+        /// <summary>
+        /// Upgrade the selection.
+        /// </summary>
+        /// <param name="upgraders">List of upgraders.</param>
+        /// <param name="shaderNamesToIgnore">Set of shader names to ignore.</param>
+        /// <param name="progressBarName">Name of the progress bar.</param>
+        /// <param name="flags">Material Upgrader flags.</param>
+        public static void UpgradeSelection(List<MaterialUpgrader> upgraders, HashSet<string> shaderNamesToIgnore, string progressBarName, UpgradeFlags flags = UpgradeFlags.None)
+        {
+            var selection = Selection.objects;
+
+            if (selection == null)
+            {
+                EditorUtility.DisplayDialog(DialogText.title, DialogText.noSelectionMessage, DialogText.ok);
+                return;
+            }
+
+            List<Material> selectedMaterials = new List<Material>(selection.Length);
+            for (int i = 0; i < selection.Length; ++i)
+            {
+                Material mat = selection[i] as Material;
+                if (mat != null)
+                    selectedMaterials.Add(mat);
+            }
+
+            int selectedMaterialsCount = selectedMaterials.Count;
+            if (selectedMaterialsCount == 0)
+            {
+                EditorUtility.DisplayDialog(DialogText.title, DialogText.noSelectionMessage, DialogText.ok);
+                return;
+            }
+
+            if (!EditorUtility.DisplayDialog(DialogText.title, string.Format("The upgrade will overwrite {0} selected material{1}. ", selectedMaterialsCount, selectedMaterialsCount > 1 ? "s" : "") +
+                    DialogText.projectBackMessage, DialogText.proceed, DialogText.cancel))
+                return;
+
+            string lastMaterialName = "";
+            for (int i = 0; i < selectedMaterialsCount; i++)
+            {
+                if (UnityEditor.EditorUtility.DisplayCancelableProgressBar(progressBarName, string.Format("({0} of {1}) {2}", i, selectedMaterialsCount, lastMaterialName), (float)i / (float)selectedMaterialsCount))
+                    break;
+
+                var material = selectedMaterials[i];
+
+                if (!ShouldUpgradeShader(material, shaderNamesToIgnore))
+                    continue;
+
                 Upgrade(material, upgraders, flags);
                 if (material != null)
                     lastMaterialName = material.name;
